@@ -1,6 +1,9 @@
 #include <cassert>
+#include <iostream>
 #include <string>
-#include <string_view>
+#include <vector>
+#include <sstream>
+#include <charconv>
 
 /*
 Task: Implement the CommandParser class such that the code below compiles and
@@ -13,8 +16,82 @@ enum class ParseResult {
   // feel free to add specific error codes
 };
 
+std::vector<std::string> splitString(const std::string& str) {
+    std::vector<std::string> tokens;
+    std::istringstream iss(str.data());
+    std::string token;
+
+    while (std::getline(iss, token, ' ')) {
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
+    }
+
+    return tokens;
+}
+
 class CommandParser {
   // your implementation
+  public:
+    CommandParser(const std::string& input)
+    {
+      _tokens = splitString(input);
+    }
+    void check_len()
+    {
+      if(_index >= _tokens.size()){_result = ParseResult::ERROR;}
+    }
+    CommandParser& require_name(std::string name)
+    {
+      if(name != _tokens[0]){_result = ParseResult::ERROR;}
+      return *this;
+    }
+
+    CommandParser& parse_arg(std::string& val)
+    {
+      check_len();
+      if(_result == ParseResult::ERROR){return *this;}
+      val = _tokens[_index];
+      ++_index;
+      return *this;
+    }
+    CommandParser& parse_arg(float& val ) {
+      check_len();
+      if(_result == ParseResult::ERROR){return *this;}
+      std::istringstream iss(_tokens[_index]);
+      iss >> std::noskipws >> val;
+
+      if (iss.fail() || !iss.eof()) {
+          _result = ParseResult::ERROR;
+      }
+      ++_index;
+      return *this;
+    }
+
+    CommandParser& parse_arg(int& val) 
+    {
+      check_len();
+      if(_result == ParseResult::ERROR){return *this;}
+      std::istringstream iss(_tokens[_index]);
+      iss >> val;
+
+      if (iss.fail() || !iss.eof()) {
+        _result = ParseResult::ERROR;
+      }
+      ++_index;
+      return *this;
+    }
+    
+    ParseResult validate() 
+    {
+      if (_result == ParseResult::ERROR){return _result;}
+      return ParseResult::OK;
+    }
+
+  private:
+    std::vector<std::string> _tokens;
+    ParseResult _result;
+    size_t _index = 1;
 };
 
 // Do not change any code below this line
@@ -23,7 +100,8 @@ struct CommandA {
   int arg1{};
   std::string arg2;
 
-  ParseResult parse(std::string_view input) {
+
+  ParseResult parse(std::string input) {
     return CommandParser(input)
         .require_name("a")
         .parse_arg(arg1)
@@ -37,7 +115,7 @@ struct CommandB {
   int arg2{};
   float arg3{};
 
-  ParseResult parse(std::string_view input) {
+  ParseResult parse(std::string input) {
     return CommandParser(input)
         .require_name("b")
         .parse_arg(arg1)
@@ -71,5 +149,7 @@ int main() {
 
   result = a.parse("a x y");
   assert(result != ParseResult::OK);
+  
+  std::cout << "Epic Win! \n";
   return 0;
 }
